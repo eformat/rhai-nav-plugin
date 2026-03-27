@@ -1,0 +1,10 @@
+[
+  {
+    "type": "console.navigation/section",
+    "properties": {
+      "id": "rhai",
+      "name": "RHAI",
+      "perspective": "admin"
+    }
+  }
+]

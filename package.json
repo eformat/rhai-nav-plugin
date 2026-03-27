@@ -1,0 +1,54 @@
+{
+  "name": "rhai-nav-plugin",
+  "version": "0.0.1",
+  "private": true,
+  "repository": "git@github.com:eformat/rhai-nav-plugin.git",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "yarn clean && NODE_ENV=production yarn webpack",
+    "build-dev": "yarn clean && yarn webpack",
+    "start": "yarn webpack serve --progress",
+    "ts-node": "ts-node -O '{\"module\":\"commonjs\"}'",
+    "lint": "eslint ./src --fix",
+    "webpack": "node -r ts-node/register ./node_modules/.bin/webpack"
+  },
+  "resolutions": {
+    "webpack": "5.75.0"
+  },
+  "devDependencies": {
+    "@openshift-console/dynamic-plugin-sdk": "^1.6.0",
+    "@openshift-console/dynamic-plugin-sdk-webpack": "^1.2.0",
+    "@types/node": "^18.0.0",
+    "@types/react": "^17.0.37",
+    "@typescript-eslint/eslint-plugin": "^5.7.0",
+    "@typescript-eslint/parser": "^5.7.0",
+    "comment-json": "^4.1.1",
+    "css-loader": "^6.5.1",
+    "eslint": "^8.4.1",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "eslint-plugin-react": "^7.27.1",
+    "prettier": "^2.5.1",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1",
+    "react-router": "5.3.x",
+    "react-router-dom": "5.3.x",
+    "style-loader": "^3.3.1",
+    "ts-loader": "^9.3.1",
+    "ts-node": "^10.8.1",
+    "typescript": "^5.0.0",
+    "webpack": "5.75.0",
+    "webpack-cli": "^4.9.2",
+    "webpack-dev-server": "^4.7.4"
+  },
+  "consolePlugin": {
+    "name": "rhai-nav-plugin",
+    "version": "0.0.1",
+    "displayName": "RHAI Navigation Plugin",
+    "description": "Defines the shared RHAI navigation section for the OpenShift console",
+    "exposedModules": {},
+    "dependencies": {
+      "@console/pluginAPI": "*"
+    }
+  }
+}

@@ -2,7 +2,7 @@
 
 A lightweight OpenShift dynamic console plugin that creates the shared "RHAI" top-level navigation section.
 
-This plugin should be deployed before other RHAI plugins (rhai-workshop-plugin, rhai-code-demo-plugin) so they can add their nav items under the "RHAI" section.
+This plugin should be deployed before other RHAI plugins so they can add their nav items under the "RHAI" section.
 
 See [CLAUDE.md](CLAUDE.md) for more details.
 

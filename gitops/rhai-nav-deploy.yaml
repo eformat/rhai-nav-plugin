@@ -1,0 +1,165 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rhai-nav-plugin
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: rhai-nav-plugin
+    app.kubernetes.io/part-of: rhai-nav-plugin
+  name: nginx-conf
+  namespace: rhai-nav-plugin
+data:
+  nginx.conf: |
+    error_log /dev/stdout info;
+    events {}
+    http {
+      access_log         /dev/stdout;
+      include            /etc/nginx/mime.types;
+      default_type       application/octet-stream;
+      keepalive_timeout  65;
+      server {
+        listen              9443 ssl;
+        ssl_certificate     /var/serving-cert/tls.crt;
+        ssl_certificate_key /var/serving-cert/tls.key;
+        root                /usr/share/nginx/html;
+      }
+    }
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rhai-nav-plugin
+  namespace: rhai-nav-plugin
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: rhai-nav-console-plugin-enabler
+rules:
+- apiGroups: ["operator.openshift.io"]
+  resources: ["consoles"]
+  verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rhai-nav-console-plugin-enabler
+subjects:
+- kind: ServiceAccount
+  name: rhai-nav-plugin
+  namespace: rhai-nav-plugin
+roleRef:
+  kind: ClusterRole
+  name: rhai-nav-console-plugin-enabler
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: rhai-nav-plugin
+    app.kubernetes.io/component: rhai-nav-plugin
+    app.kubernetes.io/instance: rhai-nav-plugin
+    app.kubernetes.io/part-of: rhai-nav-plugin
+    app.openshift.io/runtime-namespace: rhai-nav-plugin
+  name: rhai-nav-plugin
+  namespace: rhai-nav-plugin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rhai-nav-plugin
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: rhai-nav-plugin
+    spec:
+      serviceAccountName: rhai-nav-plugin
+      initContainers:
+      - name: enable-plugin
+        image: registry.redhat.io/openshift4/ose-cli:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Enable the console plugin if not already enabled
+          PLUGIN=rhai-nav-plugin
+          if kubectl get consoles.operator.openshift.io cluster -o jsonpath='{.spec.plugins}' 2>/dev/null | grep -q "$PLUGIN"; then
+            echo "Plugin $PLUGIN already enabled"
+          else
+            kubectl patch consoles.operator.openshift.io cluster --type=json \
+              -p="[{\"op\":\"add\",\"path\":\"/spec/plugins/-\",\"value\":\"$PLUGIN\"}]"
+            echo "Plugin $PLUGIN enabled"
+          fi
+      containers:
+      - image: quay.io/eformat/rhai-nav-plugin:latest
+        imagePullPolicy: Always
+        name: rhai-nav-plugin
+        ports:
+        - containerPort: 9443
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /var/serving-cert
+          name: plugin-serving-cert
+          readOnly: true
+        - mountPath: /etc/nginx/nginx.conf
+          name: nginx-conf
+          readOnly: true
+          subPath: nginx.conf
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      volumes:
+      - name: plugin-serving-cert
+        secret:
+          defaultMode: 420
+          secretName: plugin-serving-cert
+      - name: nginx-conf
+        configMap:
+          defaultMode: 420
+          name: nginx-conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    service.alpha.openshift.io/serving-cert-secret-name: plugin-serving-cert
+  labels:
+    app: rhai-nav-plugin
+    app.kubernetes.io/component: rhai-nav-plugin
+    app.kubernetes.io/instance: rhai-nav-plugin
+    app.kubernetes.io/part-of: rhai-nav-plugin
+  name: rhai-nav-plugin
+  namespace: rhai-nav-plugin
+spec:
+  ports:
+  - name: 9443-tcp
+    port: 9443
+    protocol: TCP
+    targetPort: 9443
+  selector:
+    app: rhai-nav-plugin
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: console.openshift.io/v1
+kind: ConsolePlugin
+metadata:
+  name: rhai-nav-plugin
+spec:
+  displayName: RHAI Navigation Plugin
+  backend:
+    type: Service
+    service:
+      basePath: /
+      name: rhai-nav-plugin
+      namespace: rhai-nav-plugin
+      port: 9443
